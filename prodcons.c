@@ -69,9 +69,8 @@ Matrix * get()
 // Matrix PRODUCER worker thread
 void *prod_worker(void *arg)
 {
-  ProdConsStats * num_produced = (ProdConsStats *) &arg;
+  ProdConsStats * produced_info = (ProdConsStats *) &arg;   // changed the name
   int num = 0;
-  Matrix * mat;
 
   for (num = 0; num < LOOPS; num_prod++) {
 
@@ -81,28 +80,23 @@ void *prod_worker(void *arg)
       pthread_cond_wait(&empty, &lock);
     }
 
-    if (num_produced -> matrixtotal == LOOPS) {
+    if (produced_info -> matrixtotal == LOOPS) {
       pthread_cond_broadcast(&full);
     } else {
       if (MATRIX_MODE == 0) {
-        mat = GenMatrixRandom();
+        M1 = GenMatrixRandom();
       } else if (MATRIX_MODE > 0) {
-        mat = GenMatrixBySize(MATRIX_MODE, MATRIX_MODE);   // where to get r and c? 
+        M1 = GenMatrixBySize(MATRIX_MODE, MATRIX_MODE);   // where to get r and c? 
       }
 
-      put(mat);
-      num_prod;
-
+      put(M1);
+      produced_info -> matrixtotal++;
+      produced_info -> sumtotal += SumMatrix(M1);
+      pthread_con_signal(&full)                           // misleading with full vs fill?
     }
-
-    
-    
-    
-    
-    
     pthread_mutex_unlock(&lock);
   }
-  return num_produced;
+  return produced_info;
 }
 
 // Matrix CONSUMER worker thread
