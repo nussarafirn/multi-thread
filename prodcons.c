@@ -30,8 +30,6 @@ pthread_cond_t full = PTHREAD_COND_INITIALIZER;
 
 // Matrix ** bigmatrix;
 
-Matrix** bigmatrix[MAX];
-
 Matrix* M1 = NULL;
 Matrix* M2 = NULL;
 Matrix* M3 = NULL;
@@ -64,7 +62,7 @@ Matrix * get()
   int temp = bigmatrix[use];
   use = (use +1) % MAX;
   count--;
-  _consumed_count = 0;
+  _consumed_count++;
   return temp;
 }
 
@@ -84,10 +82,7 @@ void *prod_worker(void *arg)
     } else if (MATRIX_MODE > 0) {
       mat = GenMatrixBySize(MATRIX_MODE, MATRIX_MODE);   // where to get r and c? 
     }
-    
-    
-    
-    
+
     pthread_mutex_unlock(&lock);
   }
   return num_produced;
@@ -96,25 +91,46 @@ void *prod_worker(void *arg)
 // Matrix CONSUMER worker thread
 void *cons_worker(void *arg)
 {
+  ProdConsStats* num_consumed = (ProdConsStats*) arg
   int i;
   for(i = 0; i< LOOPS; i++){
       pthread_mutex_lock(&lock);
       while (count == 0 && finished == 0)
         pthread_cond_wait(&full,&lock);
-      int **bm = *&bigmatrix;
       if(M1 == NULL && M2 == NULL && finished != 1){
       //get value to M1
       M1 = get();
-    
+      num_consumed->sumtotal += SumMatrix(M1)
+      num_consumed->matrixtotal++;
       }else if(M1 !=NULL&& M2 == NULL && finished != 1){
       //get value to M2
       M2 = get();
-    
+      num_consumed->sumtotal += SumMatrix(M1)
+       num_consumed->matrixtotal++;
       }else{
       //multiply M1 and M2
       M3 = MatrixMultiply(M1,M2);
+      num_consumed->multtotal++;
+      if(M3 != NULL){//if M3 is not null free all the matrix
+        DisplayMatrix(M1,stdout);
+        printf("    X\n");
+        DisplayMatrix(M2,stdout);
+        printf("    =\n");
+        DisplayMatrix(M3,stdout);
+        printf("\n");
+        free(M1);
+        free(M2);
+        free(M3);
+        M1 = NULL;
+        M2 = NULL;
+        M3 = NULL;
+      } else{// if M3 is null free M2 to get the next matrix
+        free(M2);
+        M2 = NULL;
       }
-      if( con_count->matrixtoal == LOOPS){
+      }
+
+      if( con_count->matrixtoal == LOOPS){//if we run out of all the matrixes and M1 is not null, then free M1
         if(M1 != NULL){
           FreeMatrix(M1);
           M1 = NULL;
@@ -128,5 +144,5 @@ void *cons_worker(void *arg)
       printf("%d\n", temp);
       FreeMatrix(M1, M2, M3);
   }
-  return NULL;
+  return num_consumed;
 }
