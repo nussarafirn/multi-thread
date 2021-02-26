@@ -20,7 +20,7 @@
 
 // Define Locks and Condition variables here
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t empt = PTHREAD_COND_INITIALIZER;
+pthread_cond_t empty = PTHREAD_COND_INITIALIZER;
 pthread_cond_t full = PTHREAD_COND_INITIALIZER;
 
 
@@ -72,18 +72,32 @@ Matrix * get()
 void *prod_worker(void *arg)
 {
   ProdConsStats * num_produced = (ProdConsStats *) &arg;
-  int num_prod = 0;
+  int num = 0;
   Matrix * mat;
 
-  for (num_prod = 0; num_prod < LOOPS; num_prod++) {
+  for (num = 0; num < LOOPS; num_prod++) {
 
     pthread_mutex_lock(&lock);
 
-    if (MATRIX_MODE == 0) {
-      mat = GenMatrixRandom();
-    } else if (MATRIX_MODE > 0) {
-      mat = GenMatrixBySize(MATRIX_MODE, MATRIX_MODE);   // where to get r and c? 
+    while (_produced_count == MAX && finished == 0) {    // check with count or _produce_count   +  with LOOPS or MAX
+      pthread_cond_wait(&empty, &lock);
     }
+
+    if (num_produced -> matrixtotal == LOOPS) {
+      pthread_cond_broadcast(&full);
+    } else {
+      if (MATRIX_MODE == 0) {
+        mat = GenMatrixRandom();
+      } else if (MATRIX_MODE > 0) {
+        mat = GenMatrixBySize(MATRIX_MODE, MATRIX_MODE);   // where to get r and c? 
+      }
+
+      put(mat);
+      num_prod;
+
+    }
+
+    
     
     
     
