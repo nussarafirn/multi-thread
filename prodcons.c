@@ -26,9 +26,9 @@ pthread_cond_t full = PTHREAD_COND_INITIALIZER;
 
 // Producer consumer data structures
 // Bounded buffer bigmatrix defined in prodcons.h
-//Matrix ** bigmatrix;
+// Matrix ** bigmatrix;
 
-Matrix** bigmatrix[MAX];      // is it ** or *
+Matrix** bigmatrix[MAX];
 
 Matrix* M1 = NULL;
 Matrix* M2 = NULL;
@@ -36,16 +36,18 @@ Matrix* M3 = NULL;
 
 
 int ptr_to_fill = 0;
-int prod_filled = 0;
+int num_produced = 0;
+int num_consumed = 0;
+int num_multiplied = 0;
 
 
 // Bounded buffer put() get()
 int put(Matrix * value)
 {
   
-  *(bigmatrix + ptr_to_fill) = value;
+  bigmatrix[ptr_to_fill] = value;
   ptr_to_fill = (ptr_to_fill + 1) % MAX;  // move next and comes back to 
-  prod_filled++;
+  num_produced++;                        // may not need this because counter
   
   return 0;
 }
@@ -58,7 +60,22 @@ Matrix * get()
 // Matrix PRODUCER worker thread
 void *prod_worker(void *arg)
 {
-  
+  ProdConsStats * prod_count = (ProdConsStats *) &arg;
+
+  int num_prod = 0;
+  Matrix * mat;
+  for (num_prod = 0; num_prod < LOOPS; num_prod++) {
+
+    //lock
+
+    if (// check if random ) {
+      mat = GenMatrixRandom();
+    } else if (//not random) {
+      mat = GenMatrixBySize(r,c);   // where to get r and c? 
+    }
+
+    // unlock
+  }
 }
 
 // Matrix CONSUMER worker thread
