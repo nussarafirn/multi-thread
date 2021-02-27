@@ -135,5 +135,8 @@ int main (int argc, char * argv[])
   printf("Sum of Matrix elements --> Produced=%d = Consumed=%d\n",prs,cos);
   printf("Matrices produced=%d consumed=%d multiplied=%d\n",prodtot,constot,consmul);
 
+  free(produced_info);
+  free(consumed_info);
+  
   return 0;
 }
