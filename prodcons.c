@@ -43,7 +43,7 @@ counter_t _consumed_count;
 
 // Bounded buffer put() get()
 
-// put the matrix in the bounded buffer
+// add the matrix in the bounded buffer
 int put(Matrix *value)
 {
   pthread_mutex_lock(&lock);
@@ -52,6 +52,7 @@ int put(Matrix *value)
     // double check if still not exceed the bounded buffer size
     if (count < BOUNDED_BUFFER_SIZE)
     {
+      // add to the next one in the bounded buffer
       bigmatrix[ptr_to_fill] = value;
       ptr_to_fill = (ptr_to_fill + 1) % BOUNDED_BUFFER_SIZE;
       count++;
@@ -79,22 +80,22 @@ Matrix *get()
 // Matrix PRODUCER worker thread
 void *prod_worker(void *arg)
 {
-  ProdConsStats *produced_info = (ProdConsStats *)arg; // changed the name
+  ProdConsStats *produced_info = (ProdConsStats *)arg;  // keep track with statistical info of producer
 
   while (get_cnt(&_produced_count) < NUMBER_OF_MATRICES)
   {
     pthread_mutex_lock(&mutex);
 
-    // wait if it fulls
+    // keep waiting if the bounded buffer still fulls
     while (count == BOUNDED_BUFFER_SIZE)
     {
       if (get_cnt(&_produced_count) == NUMBER_OF_MATRICES)
       {
-        pthread_cond_signal(&full);
+        pthread_cond_signal(&full);   // send signal to the wating thread that buffer is full
         pthread_mutex_unlock(&mutex);
         return 0;
       }
-      pthread_cond_wait(&empty, &mutex);
+      pthread_cond_wait(&empty, &mutex);  // release the lock wait for c.v. to be signaled
     }
 
     Matrix *mat = GenMatrixRandom();
@@ -102,14 +103,19 @@ void *prod_worker(void *arg)
     if (get_cnt(&_produced_count) < NUMBER_OF_MATRICES)
     {
       put(mat);
+
+      // update statistical info of producer
       produced_info->matrixtotal++;
       produced_info->sumtotal += SumMatrix(mat);
       increment_cnt(&_produced_count);
-      pthread_cond_signal(&full);
+
+      pthread_cond_signal(&full);    // sends signal that buffer's full
     }
+    
     pthread_mutex_unlock(&mutex);
   }
-  pthread_cond_broadcast(&empty);
+
+  pthread_cond_broadcast(&empty);  // waking up all threads
   return 0;
 }
 
