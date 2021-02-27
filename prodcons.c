@@ -200,7 +200,7 @@ void *cons_worker(void *arg)
     {
       pthread_cond_signal(&empty);
     }
-    pthread_mutex_unlock(&lock);
+    pthread_mutex_unlock(&mutex);
   }
   return consumed_info;
 }
