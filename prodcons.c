@@ -104,7 +104,7 @@ void *prod_worker(void *arg)
       // // TODO: double check if we need the matrix_mode
       // if (MATRIX_MODE == 0)
       // {
-        M1 = GenMatrixRandom();
+        Matrix * mat = GenMatrixRandom();
       // }
       // else if (MATRIX_MODE > 0)
       // {
@@ -113,9 +113,9 @@ void *prod_worker(void *arg)
 
       if (get_cnt(&_produced_count) < NUMBER_OF_MATRICES)
       {
-        put(M1);
+        put(mat);
         produced_info->matrixtotal++;
-        produced_info->sumtotal += SumMatrix(M1);
+        produced_info->sumtotal += SumMatrix(mat);
         increment_cnt(&_produced_count);
         pthread_cond_signal(&full);
       }
