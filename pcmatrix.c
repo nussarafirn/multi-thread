@@ -23,6 +23,10 @@
  *  Each thread produces a total sum of the value of
  *  randomly generated elements.  Producer sum and consumer sum must match.
  *
+ *  
+ *  Author: Xiuxiang Wu, Firn Tieanklin
+ *  Date:   2/26/2021
+ * 
  *  University of Washington, Tacoma
  *  TCSS 422 - Operating Systems
  */
@@ -85,41 +89,7 @@ int main (int argc, char * argv[])
   // Seed the random number generator with the system time
   srand((unsigned) time(&t));
 
-  //
-  // Demonstration code to show the use of matrix routines
-  //
-  // DELETE THIS CODE ON ASSIGNMENT 3 SUBMISSION
-  // ----------------------------------------------------------
-  bigmatrix = (Matrix **) malloc(sizeof(Matrix *) * BOUNDED_BUFFER_SIZE);        // keep this
- /* printf("MATRIX MULTIPLICATION DEMO:\n\n");
-  Matrix *m1, *m2, *m3;                             ----------------------------
-  for (int i=0;i<NUMBER_OF_MATRICES;i++)
-  {
-    m1 = GenMatrixRandom();
-    m2 = GenMatrixRandom();
-    m3 = MatrixMultiply(m1, m2);
-    if (m3 != NULL)
-    {
-      DisplayMatrix(m1,stdout);
-      printf("    X\n");
-      DisplayMatrix(m2,stdout);
-      printf("    =\n");
-      DisplayMatrix(m3,stdout);
-      printf("\n");
-      FreeMatrix(m3);
-      FreeMatrix(m2);
-      FreeMatrix(m1);
-      m1=NULL;
-      m2=NULL;
-      m3=NULL;
-    }
-  }
-  return 0;*/
-  // ----------------------------------------------------------
-
-
-
-
+  bigmatrix = (Matrix **) malloc(sizeof(Matrix *) * BOUNDED_BUFFER_SIZE);        
 
   printf("Producing %d matrices in mode %d.\n",NUMBER_OF_MATRICES,MATRIX_MODE);
   printf("Using a shared buffer of size=%d\n", BOUNDED_BUFFER_SIZE);
@@ -145,6 +115,7 @@ int main (int argc, char * argv[])
   consumed_info->sumtotal = 0, 
   consumed_info->multtotal = 0, 
   consumed_info->matrixtotal = 0;
+  
   for (int i = 0; i < numw; i++) {
     pthread_create(&pr[i], NULL, prod_worker, produced_info);
     pthread_create(&co[i], NULL, cons_worker, consumed_info);
@@ -154,6 +125,7 @@ int main (int argc, char * argv[])
     pthread_join(pr[i],  NULL);
     pthread_join(co[i], NULL);  
   }
+
   // add up total matrix stats in prs, cos, prodtot, constot, consmul
   prs = produced_info->sumtotal;
   cos = consumed_info->sumtotal;
