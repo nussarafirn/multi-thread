@@ -135,72 +135,93 @@ void *cons_worker(void *arg)
     pthread_mutex_lock(&mutex);
     while (count == 0)
     {
-      if (get_cnt(&_consumed_count) == NUMBER_OF_MATRICES)
+      if (get_cnt(&_consumed_count) >= NUMBER_OF_MATRICES)
       {
         pthread_cond_signal(&full);
         pthread_mutex_unlock(&mutex);
         return result;
-      }
+     }
       pthread_cond_broadcast(&empty);
       pthread_cond_wait(&full, &mutex);
     }
 
-    if (M1 == NULL && M2 == NULL)
-    {
       //get value to M1
       M1 = get();
       consumed_info->matrixtotal++;
       consumed_info->sumtotal += SumMatrix(M1);
       increment_cnt(&_consumed_count);
-    }
-    else if (M1 != NULL && M2 == NULL)
+
+    while(count == 0)
     {
+    	if (get_cnt(&_consumed_count) >= NUMBER_OF_MATRICES || M1 == NULL)
+     	{
+         pthread_cond_signal(&full);
+        pthread_mutex_unlock(&mutex);
+         return result;
+        }
+        pthread_cond_broadcast(&empty);
+        pthread_cond_wait(&full, &mutex);
+    }
+    while(count == 0)
+    {
+    	if (get_cnt(&_consumed_count) >= NUMBER_OF_MATRICES || M2 == NULL)
+     	{
+         pthread_cond_signal(&full);
+        pthread_mutex_unlock(&mutex);
+         return result;
+        }
+        pthread_cond_broadcast(&empty);
+        pthread_cond_wait(&full, &mutex);
+    }
+    //get value to M2
+    M2 = get();
+    consumed_info->matrixtotal++;
+    consumed_info->sumtotal += SumMatrix(M2);
+    increment_cnt(&_consumed_count);
+    //multiply M1 and M2
+    M3 = MatrixMultiply(M1, M2);
+    consumed_info->multtotal++;
+    while(M3 == NULL)
+    {
+      while(count == 0)
+      {
+    	if (get_cnt(&_consumed_count) >= NUMBER_OF_MATRICES || M2 == NULL)
+     	{
+         pthread_cond_signal(&full);
+        pthread_mutex_unlock(&mutex);
+         return result;
+        }
+        pthread_cond_broadcast(&empty);
+        pthread_cond_wait(&full, &mutex);
+      }
+      if(M2 != NULL)
+      {
+      FreeMatrix(M2);
+      }
       //get value to M2
       M2 = get();
       consumed_info->matrixtotal++;
       consumed_info->sumtotal += SumMatrix(M2);
-      increment_cnt(&_consumed_count);
+      increment_cnt(&_consumed_count); 
+      
     }
-    else
-    {
-      //multiply M1 and M2
-      M3 = MatrixMultiply(M1, M2);
-      consumed_info->multtotal++;
-      if (M3 != NULL)
-      { //if M3 is not null free all the matrix
+
+	//if M3 is not null free all the matrix
         DisplayMatrix(M1, stdout);
         printf("    X\n");
         DisplayMatrix(M2, stdout);
         printf("    =\n");
         DisplayMatrix(M3, stdout);
         printf("\n");
-        FreeMatrix(M1);
-        FreeMatrix(M2);
         FreeMatrix(M3);
-        M1 = NULL;
-        M2 = NULL;
-        M3 = NULL;
-      }
-      else
-      { // if M3 is null free M2 to get the next matrix
         FreeMatrix(M2);
-        M2 = NULL;
-      }
-    }
-
-    if (consumed_info->matrixtotal == BOUNDED_BUFFER_SIZE)
-    { //if we run out of all the matrixes and M1 is not null, then free M1
-      if (M1 != NULL)
-      {
         FreeMatrix(M1);
-        M1 = NULL;
-      }
-    }
-    else
-    {
-      pthread_cond_signal(&empty);
-    }
-    pthread_mutex_unlock(&mutex);
+      //  M1 = NULL;
+       // M2 = NULL;
+      //  M3 = NULL;
+  pthread_cond_signal(&empty);
+  pthread_mutex_unlock(&mutex);
   }
-  return consumed_info;
+  pthread_cond_broadcast(&full); 
+  return result;
 }
