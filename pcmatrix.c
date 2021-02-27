@@ -128,7 +128,8 @@ int main (int argc, char * argv[])
 
   pthread_t pr[numw];
   pthread_t co[numw];
-
+  if(numw < 1 || BOUNDED_BUFFER_SIZE < 1) {printf("Invalid input!\n");return 0;}
+  
   int prs = 0;
   int cos = 0;
   int prodtot = 0;
@@ -136,7 +137,7 @@ int main (int argc, char * argv[])
   int consmul = 0;
 
   // consume ProdConsStats from producer and consumer threads
-    ProdConsStats * produced_info = (ProdConsStats *) malloc(sizeof(ProdConsStats));
+  ProdConsStats * produced_info = (ProdConsStats *) malloc(sizeof(ProdConsStats));
   produced_info->sumtotal = 0, 
   produced_info->multtotal = 0, 
   produced_info->matrixtotal = 0;
