@@ -66,6 +66,7 @@ Matrix *get()
 {
   Matrix *temp = NULL;
   pthread_mutex_lock(&lock);
+  //if the buffer is not empty, then get matrixes into the buffer.
   if (count > 0)
   {
     temp = bigmatrix[ptr_to_use];
@@ -127,6 +128,8 @@ void *cons_worker(void *arg)
   while (get_cnt(&_consumed_count) < NUMBER_OF_MATRICES)
   {
     pthread_mutex_lock(&mutex);
+    // check the buffer and get matrix to M1
+    // if the buffer is empty, then wait
     while (count == 0)
     {
       if (get_cnt(&_consumed_count) >= NUMBER_OF_MATRICES)
@@ -139,7 +142,7 @@ void *cons_worker(void *arg)
       pthread_cond_wait(&full, &mutex);
     }
 
-    //get value to M1
+    //get a matrix and assign to M1
     M1 = get();
     consumed_info->matrixtotal++;
     consumed_info->sumtotal += SumMatrix(M1);
@@ -156,6 +159,8 @@ void *cons_worker(void *arg)
       pthread_cond_broadcast(&empty);
       pthread_cond_wait(&full, &mutex);
     }
+    // check the buffer and get matrix to M2
+    // if the buffer is empty, then wait
     while (count == 0)
     {
       if (get_cnt(&_consumed_count) >= NUMBER_OF_MATRICES || M2 == NULL)
@@ -168,7 +173,7 @@ void *cons_worker(void *arg)
       pthread_cond_wait(&full, &mutex);
     }
 
-    //get value to M2
+    //get a matrix and assign to M2
     M2 = get();
 
     consumed_info->matrixtotal++;
@@ -177,9 +182,11 @@ void *cons_worker(void *arg)
 
     //multiply M1 and M2
     M3 = MatrixMultiply(M1, M2);
-
-    while (M3 == NULL)
+    //Looking for matrixes that can multiply with M1
+    while (M3 == NULL) 
     {
+      // check the buffer and get matrix to M2
+      // if the buffer is empty, then wait
       while (count == 0)
       {
         if (get_cnt(&_consumed_count) >= NUMBER_OF_MATRICES || M2 == NULL)
@@ -196,16 +203,16 @@ void *cons_worker(void *arg)
         FreeMatrix(M2);
       }
 
-      //get value to M2
+      //get a matrix and assign to M2
       M2 = get();
-
       consumed_info->matrixtotal++;
       consumed_info->sumtotal += SumMatrix(M2);
       increment_cnt(&_consumed_count);
     }
+    //Increment multtotal
     consumed_info->multtotal++;
 
-    //if M3 is not null free all the matrix
+    //if M3 is not null print out the multiplecation and free all the matrix
     DisplayMatrix(M1, stdout);
     printf("    X\n");
     DisplayMatrix(M2, stdout);
@@ -218,6 +225,7 @@ void *cons_worker(void *arg)
     pthread_cond_signal(&empty);
     pthread_mutex_unlock(&mutex);
   }
+  //wakeup sleeping thread. work is done.
   pthread_cond_broadcast(&full);
   return result;
 }
