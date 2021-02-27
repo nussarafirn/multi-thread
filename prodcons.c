@@ -20,140 +20,191 @@
 
 // Define Locks and Condition variables here
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t empty = PTHREAD_COND_INITIALIZER;
 pthread_cond_t full = PTHREAD_COND_INITIALIZER;
 
-
 // Producer consumer data structures
 // Bounded buffer bigmatrix defined in prodcons.h
-
-
 // Matrix ** bigmatrix;
 
-Matrix* M1 = NULL;
-Matrix* M2 = NULL;
-Matrix* M3 = NULL;
+Matrix *M1 = NULL;
+Matrix *M2 = NULL;
+Matrix *M3 = NULL;
 
+volatile int ptr_to_fill = 0;
+volatile int ptr_to_use = 0;
+volatile int count = 0;
 
-
-int ptr_to_fill = 0;
-int _produced_count = 0;
-int _consumed_count = 0;
-// int num_multiplied = 0;
-int fill = 0;
-int use = 0;
-int count = 0;
-int finished = 0;
+counter_t _produced_count;
+counter_t _consumed_count;
 
 // Bounded buffer put() get()
-int put(Matrix * value)
+int put(Matrix *value)
 {
-  
-  bigmatrix[ptr_to_fill] = value;
-  ptr_to_fill = (ptr_to_fill + 1) % MAX;  // move next and comes back to 
-  _produced_count++;   
-  count++;                     // may not need this because counter
-  
+  pthread_mutex_lock(&lock);
+  if (value != NULL)
+  {
+    // double check if still not exceed the bounded buffer size
+    if (count < BOUNDED_BUFFER_SIZE)
+    {
+      bigmatrix[ptr_to_fill] = value;
+      //ptr_to_use = ptr_to_fill;                                  // TODO: look if we need it.
+      ptr_to_fill = (ptr_to_fill + 1) % BOUNDED_BUFFER_SIZE; // move next and comes back to
+      count++;                                               // may not need this becaptr_to_use counter
+    }
+  }
+  pthread_mutex_unlock(&lock);
   return 0;
 }
 
-Matrix * get()
+Matrix *get()
 {
-  int temp = bigmatrix[use];
-  use = (use +1) % MAX;
-  count--;
-  _consumed_count++;
+  Matrix *temp;
+  pthread_mutex_lock(&lock);
+  if (count > 0)
+  {
+    temp = bigmatrix[ptr_to_use];
+    ptr_to_use = (ptr_to_use + 1) % BOUNDED_BUFFER_SIZE;
+    count--;
+  }
+  pthread_mutex_unlock(&lock);
   return temp;
 }
 
 // Matrix PRODUCER worker thread
 void *prod_worker(void *arg)
 {
-  ProdConsStats * produced_info = (ProdConsStats *) &arg;   // changed the name
+  ProdConsStats *produced_info = (ProdConsStats *)&arg; // changed the name
   int num = 0;
 
-  for (num = 0; num < LOOPS; num_prod++) {
+  while (get_cnt(&_produced_count) < NUMBER_OF_MATRICES)
+  {
+    pthread_mutex_lock(&mutex);
 
-    pthread_mutex_lock(&lock);
-
-    while (_produced_count == MAX && finished == 0) {    // check with count or _produce_count   +  with LOOPS or MAX
-      pthread_cond_wait(&empty, &lock);
+    // wait if it fulls
+    while (count == BOUNDED_BUFFER_SIZE)
+    {
+      if (get_cnt(&_produced_count) == NUMBER_OF_MATRICES)
+      { // check if >= or ==
+        pthread_cond_signal(&full);
+        pthread_mutex_unlock(&mutex);
+        return 0;
+      }
+      pthread_cond_wait(&empty, &mutex);
     }
 
-    if (produced_info -> matrixtotal == LOOPS) {
+    if (produced_info->matrixtotal == LOOPS)
+    {
       pthread_cond_broadcast(&full);
-    } else {
-      if (MATRIX_MODE == 0) {
-        M1 = GenMatrixRandom();
-      } else if (MATRIX_MODE > 0) {
-        M1 = GenMatrixBySize(MATRIX_MODE, MATRIX_MODE);   // where to get r and c? 
-      }
-
-      put(M1);
-      produced_info -> matrixtotal++;
-      produced_info -> sumtotal += SumMatrix(M1);
-      pthread_con_signal(&full)                           // misleading with full vs fill?
     }
-    pthread_mutex_unlock(&lock);
+    else
+    {
+
+      // TODO: double check if we need the matrix_mode
+      if (MATRIX_MODE == 0)
+      {
+        M1 = GenMatrixRandom();
+      }
+      else if (MATRIX_MODE > 0)
+      {
+        M1 = GenMatrixBySize(MATRIX_MODE, MATRIX_MODE); // where to get r and c?
+      }
+
+      if (get_cnt(&_produced_count) < NUMBER_OF_MATRICES)
+      {
+        put(M1);
+        produced_info->matrixtotal++;
+        produced_info->sumtotal += SumMatrix(M1);
+        increment_cnt(&_produced_count);
+        pthread_con_signal(&full);
+      }
+      pthread_mutex_unlock(&mutex);
+    }
+
+    pthread_cond_broadcast(&empty); // check if we need to wake up all the threads
+    return 0;
   }
-  return produced_info;
-}
 
-// Matrix CONSUMER worker thread
-void *cons_worker(void *arg)
-{
-  ProdConsStats* num_consumed = (ProdConsStats*) arg
-  int i;
-  for(i = 0; i< LOOPS; i++){
-      pthread_mutex_lock(&lock);
-      while (count == 0 && finished == 0)
-        pthread_cond_wait(&full,&lock);
-      if(M1 == NULL && M2 == NULL && finished != 1){
-      //get value to M1
-      M1 = get();
-      num_consumed->sumtotal += SumMatrix(M1)
-      num_consumed->matrixtotal++;
-      }else if(M1 !=NULL&& M2 == NULL && finished != 1){
-      //get value to M2
-      M2 = get();
-      num_consumed->sumtotal += SumMatrix(M1)
-       num_consumed->matrixtotal++;
-      }else{
-      //multiply M1 and M2
-      M3 = MatrixMultiply(M1,M2);
-      num_consumed->multtotal++;
-      if(M3 != NULL){//if M3 is not null free all the matrix
-        DisplayMatrix(M1,stdout);
-        printf("    X\n");
-        DisplayMatrix(M2,stdout);
-        printf("    =\n");
-        DisplayMatrix(M3,stdout);
-        printf("\n");
-        free(M1);
-        free(M2);
-        free(M3);
-        M1 = NULL;
-        M2 = NULL;
-        M3 = NULL;
-      } else{// if M3 is null free M2 to get the next matrix
-        free(M2);
-        M2 = NULL;
-      }
+  // Matrix CONSUMER worker thread
+  void *cons_worker(void *arg)
+  {
+    ProdConsStats *consumed_info = (ProdConsStats *)arg;
+    int result = 0;
+    while (get_cnt(&_consumed_count) < NUMBER_OF_MATRICES)
+    {
+      pthread_mutex_lock(&mutex);
+      while (count == 0)
+      {
+        if (get_cnt(&_consumed_count) == NUMBER_OF_MATRICES)
+        {
+          pthread_cond_signal(&full);
+          pthread_mutex_unlock(&mutex);
+          return result;
+        }
+        pthread_cond_broadcast(&empty);
+        pthread_cond_wait(&full, &mutex);
       }
 
-      if( con_count->matrixtoal == LOOPS){//if we run out of all the matrixes and M1 is not null, then free M1
-        if(M1 != NULL){
+      if (M1 == NULL && M2 == NULL)
+      {
+        //get value to M1
+        M1 = get();
+        consumed_info->matrixtotal++;
+        consumed_info->sumtotal += SumMatrix(M1);
+        increment_cnt(&_consumed_count);
+      }
+      else if (M1 != NULL && M2 == NULL)
+      {
+        //get value to M2
+        M2 = get();
+        consumed_info->matrixtotal++;
+        consumed_info->sumtotal += SumMatrix(M2);
+        increment_cnt(&_consumed_count);
+      }
+      else
+      {
+        //multiply M1 and M2
+        M3 = MatrixMultiply(M1, M2);
+        consumed_info->multtotal++;
+        if (M3 != NULL)
+        { //if M3 is not null free all the matrix
+          DisplayMatrix(M1, stdout);
+          printf("    X\n");
+          DisplayMatrix(M2, stdout);
+          printf("    =\n");
+          DisplayMatrix(M3, stdout);
+          printf("\n");
+          FreeMaxtirx(M1);
+          FreeMaxtirx(M2);
+          FreeMaxtirx(M3);
+          M1 = NULL;
+          M2 = NULL;
+          M3 = NULL;
+        }
+        else
+        { // if M3 is null free M2 to get the next matrix
+          free(M2);
+          M2 = NULL;
+        }
+      }
+
+      if (consumed_info->matrixtoal == BOUNDED_BUFFER_SIZE)
+      { //if we run out of all the matrixes and M1 is not null, then free M1
+        if (M1 != NULL)
+        {
           FreeMatrix(M1);
           M1 = NULL;
         }
-        finished = 1;
-      } else {
+      }
+      else
+      {
         pthread_con_signal(&empty);
       }
       pthread_mutex_unlock(&lock);
 
       printf("%d\n", temp);
       FreeMatrix(M1, M2, M3);
+    }
+    return consumed_info;
   }
-  return num_consumed;
-}

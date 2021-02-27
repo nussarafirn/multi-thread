@@ -1,0 +1,31 @@
+{
+    "files.associations": {
+        "algorithm": "c",
+        "array": "c",
+        "*.tcc": "c",
+        "deque": "c",
+        "exception": "c",
+        "memory_resource": "c",
+        "string_view": "c",
+        "functional": "c",
+        "iterator": "c",
+        "memory": "c",
+        "numeric": "c",
+        "random": "c",
+        "iosfwd": "c",
+        "istream": "c",
+        "limits": "c",
+        "ostream": "c",
+        "queue": "c",
+        "ranges": "c",
+        "sstream": "c",
+        "stdexcept": "c",
+        "streambuf": "c",
+        "cmath": "c",
+        "tuple": "c",
+        "type_traits": "c",
+        "typeinfo": "c",
+        "utility": "c",
+        "vector": "c"
+    }
+}

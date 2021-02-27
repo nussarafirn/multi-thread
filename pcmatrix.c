@@ -90,9 +90,9 @@ int main (int argc, char * argv[])
   //
   // DELETE THIS CODE ON ASSIGNMENT 3 SUBMISSION
   // ----------------------------------------------------------
-  bigmatrix = (Matrix **) malloc(sizeof(Matrix *) * BOUNDED_BUFFER_SIZE);
-  printf("MATRIX MULTIPLICATION DEMO:\n\n");
-  Matrix *m1, *m2, *m3;
+  bigmatrix = (Matrix **) malloc(sizeof(Matrix *) * BOUNDED_BUFFER_SIZE);        // keep this
+ /* printf("MATRIX MULTIPLICATION DEMO:\n\n");
+  Matrix *m1, *m2, *m3;                             ----------------------------
   for (int i=0;i<NUMBER_OF_MATRICES;i++)
   {
     m1 = GenMatrixRandom();
@@ -114,7 +114,7 @@ int main (int argc, char * argv[])
       m3=NULL;
     }
   }
-  return 0;
+  return 0;*/
   // ----------------------------------------------------------
 
 
