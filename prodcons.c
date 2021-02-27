@@ -81,7 +81,8 @@ Matrix *get()
 // Matrix PRODUCER worker thread
 void *prod_worker(void *arg)
 {
-  ProdConsStats *produced_info = (ProdConsStats *)arg;  // keep track with statistical info of producer
+  // keep track with statistical info of producer
+  ProdConsStats *produced_info = (ProdConsStats *)arg;
 
   while (get_cnt(&_produced_count) < NUMBER_OF_MATRICES)
   {
@@ -92,11 +93,14 @@ void *prod_worker(void *arg)
     {
       if (get_cnt(&_produced_count) == NUMBER_OF_MATRICES)
       {
-        pthread_cond_signal(&full);   // send signal to the wating thread that buffer is full
+        // send signal to the wating thread that buffer is full
+        pthread_cond_signal(&full);
         pthread_mutex_unlock(&mutex);
         return 0;
       }
-      pthread_cond_wait(&empty, &mutex);  // release the lock wait for c.v. to be signaled
+
+      // release the lock wait for c.v. to be signaled
+      pthread_cond_wait(&empty, &mutex);
     }
 
     Matrix *mat = GenMatrixRandom();
@@ -110,13 +114,15 @@ void *prod_worker(void *arg)
       produced_info->sumtotal += SumMatrix(mat);
       increment_cnt(&_produced_count);
 
-      pthread_cond_signal(&full);    // sends signal that buffer's full
+      // sends signal that buffer's full
+      pthread_cond_signal(&full);
     }
-    
+
     pthread_mutex_unlock(&mutex);
   }
 
-  pthread_cond_broadcast(&empty);  // waking up all threads
+  // waking up all threads
+  pthread_cond_broadcast(&empty);
   return 0;
 }
 
@@ -128,6 +134,7 @@ void *cons_worker(void *arg)
   while (get_cnt(&_consumed_count) < NUMBER_OF_MATRICES)
   {
     pthread_mutex_lock(&mutex);
+
     // check the buffer and get matrix to M1
     // if the buffer is empty, then wait
     while (count == 0)
@@ -159,6 +166,7 @@ void *cons_worker(void *arg)
       pthread_cond_broadcast(&empty);
       pthread_cond_wait(&full, &mutex);
     }
+
     // check the buffer and get matrix to M2
     // if the buffer is empty, then wait
     while (count == 0)
@@ -182,8 +190,9 @@ void *cons_worker(void *arg)
 
     //multiply M1 and M2
     M3 = MatrixMultiply(M1, M2);
+
     //Looking for matrixes that can multiply with M1
-    while (M3 == NULL) 
+    while (M3 == NULL)
     {
       // check the buffer and get matrix to M2
       // if the buffer is empty, then wait
@@ -225,6 +234,7 @@ void *cons_worker(void *arg)
     pthread_cond_signal(&empty);
     pthread_mutex_unlock(&mutex);
   }
+  
   //wakeup sleeping thread. work is done.
   pthread_cond_broadcast(&full);
   return result;
